@@ -115,41 +115,7 @@ func Cors(options ...CorsOption) router.Middleware {
 			w.Header().Set("Access-Control-Max-Age", strconv.Itoa(opts.MaxAge))
 		}
 	}
-
-	handleRequest := func(w http.ResponseWriter, r *http.Request) {
-
-		origin := r.Header.Get("Origin")
-
-		// Check if the origin is allowed
-		if !isOriginAllowed(opts.AllowedOrigins, origin) {
-			slog.Info("CORS origin not allowed", "origin", origin)
-			return
-		}
-
-		// Check if the method is allowed
-		if !isMethodAllowed(opts.AllowedMethods, r.Method) {
-			slog.Info("CORS method not allowed", "method", r.Method)
-			return
-		}
-
-		// Set the allowed origin
-		if len(opts.AllowedOrigins) > 0 {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-		} else {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-		}
-
-		// Set the exposed headers
-		if len(opts.ExposedHeaders) > 0 {
-			w.Header().Add("Access-Control-Expose-Headers", exposedHeaders)
-		}
-
-		// Check if allow credentials is set and set it
-		if opts.AllowCredentials {
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-		}
-	}
-
+ 
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 
@@ -161,7 +127,42 @@ func Cors(options ...CorsOption) router.Middleware {
 				return
 			}
 
-			handleRequest(w, r)
+			origin := r.Header.Get("Origin")
+	
+			if origin == "" {
+				next(w, r)
+				return
+			}
+	
+			// Check if the origin is allowed
+			if !isOriginAllowed(opts.AllowedOrigins, origin) {
+				slog.Info("CORS origin not allowed", "origin", origin)
+				return
+			}
+	
+			// Check if the method is allowed
+			if !isMethodAllowed(opts.AllowedMethods, r.Method) {
+				slog.Info("CORS method not allowed", "method", r.Method)
+				return
+			}
+	
+			// Set the allowed origin
+			if len(opts.AllowedOrigins) > 0 {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			} else {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			}
+	
+			// Set the exposed headers
+			if len(opts.ExposedHeaders) > 0 {
+				w.Header().Add("Access-Control-Expose-Headers", exposedHeaders)
+			}
+	
+			// Check if allow credentials is set and set it
+			if opts.AllowCredentials {
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			}
+			
 			next(w, r)
 		}
 	}

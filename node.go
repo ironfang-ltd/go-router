@@ -119,16 +119,12 @@ func (r *routeTreeNode) GetOrCreateNode(path string) *routeTreeNode {
 	return node
 }
 
-func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
+func (r *routeTreeNode) Find(req *http.Request) (*routeTreeNode, bool) {
 
 	path := req.URL.Path
 
-	if path == "" {
-		return nil
-	}
-
-	if path == "/" {
-		return r
+	if path == "" || path == "/" {
+		return r, true
 	}
 
 	node := r
@@ -159,7 +155,7 @@ func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
 				req.SetPathValue(child.segment[1:], segment)
 
 				if high >= len(path) {
-					return child
+					return child, true
 				}
 
 				node = child
@@ -168,7 +164,7 @@ func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
 				break
 			} else if child.segment == segment {
 				if high >= len(path) {
-					return child
+					return child, true
 				}
 
 				node = child
@@ -176,16 +172,16 @@ func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
 				path = path[high:]
 				break
 			} else if child.catchAll {
-				return child
+				return child, true
 			}
 		}
 
 		if !found {
-			return nil
+			return node, false
 		}
 	}
 
-	return node
+	return node, true
 }
 
 func (r *routeTreeNode) SetHandler(method string, handler http.HandlerFunc) {
@@ -236,7 +232,7 @@ func (r *routeTreeNode) wrapMiddleware(final http.HandlerFunc) http.HandlerFunc 
 		node = node.parent
 	}
 
-	for i := 0; i < len(middlewares); i++ {
+	for i := range middlewares {
 		final = middlewares[i](final)
 	}
 
@@ -244,6 +240,12 @@ func (r *routeTreeNode) wrapMiddleware(final http.HandlerFunc) http.HandlerFunc 
 }
 
 func (r *routeTreeNode) final(w http.ResponseWriter, req *http.Request) {
+
+	f := req.Context().Value("FOUND")
+	if f == false {
+		r.config.NotFoundHandler(w, req)
+		return
+	}
 
 	handler := r.GetHandler(req.Method)
 

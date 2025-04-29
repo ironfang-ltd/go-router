@@ -4,14 +4,17 @@ import (
 	"net/http"
 
 	"github.com/ironfang-ltd/go-router"
+	"github.com/ironfang-ltd/go-router/middleware"
 )
 
 func main() {
 
 	r := router.New()
 
+	r.Use(middleware.Cors(middleware.WithAllowedOrigins("http://localhost:3000")))
+
 	// Simple
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/asd", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, World!"))
 	})
 
@@ -24,7 +27,9 @@ func main() {
 	// With Group
 	apiGroup := r.Group("/api")
 
-	apiGroup.Get("/hello", func(w http.ResponseWriter, r *http.Request) {
+	apiGroup.Use(middleware.Cors(middleware.WithAllowedMethods("OPTIONS", "POST")))
+
+	apiGroup.Post("/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, World from api!"))
 	})
 

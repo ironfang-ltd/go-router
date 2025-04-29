@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"net/http"
 )
 
@@ -142,12 +143,11 @@ func (rtr *router) GetRoutes() []RouteDescriptor {
 }
 
 func (rtr *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	node, found := rtr.node.Find(r)
 
-	node := rtr.node.Find(r)
-
-	if node == nil {
-		rtr.config.NotFoundHandler(w, r)
-		return
+	if !found {
+		ctx := context.WithValue(r.Context(), "FOUND", false)
+		r = r.WithContext(ctx)
 	}
 
 	node.handler(w, r)

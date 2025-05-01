@@ -12,28 +12,41 @@ func TestCors(t *testing.T) {
 		name            string
 		options         []CorsOption
 		method          string
+		status          int
 		requestHeaders  map[string]string
 		responseHeaders map[string]string
 	}{
 		{
-			name:           "DefaultConfig",
-			method:         "GET",
-			options:        []CorsOption{},
-			requestHeaders: map[string]string{},
-			responseHeaders: map[string]string{
-				"Vary": "Origin",
+			name:            "DefaultConfig",
+			method:          "GET",
+			options:         []CorsOption{},
+			status:          200,
+			requestHeaders:  map[string]string{},
+			responseHeaders: map[string]string{},
+		},
+		{
+			name:   "DefaultConfig",
+			method: "GET",
+			options: []CorsOption{
+				WithAllowedOrigins("http://example.com"),
 			},
+			status: 403,
+			requestHeaders: map[string]string{
+				"Origin": "http://badorigin.com",
+			},
+			responseHeaders: map[string]string{},
 		},
 		{
 			name:    "AnyOrigin",
 			options: []CorsOption{},
 			method:  "GET",
+			status:  200,
 			requestHeaders: map[string]string{
 				"Origin": "http://example.com",
 			},
 			responseHeaders: map[string]string{
 				"Vary":                        "Origin",
-				"Access-Control-Allow-Origin": "*",
+				"Access-Control-Allow-Origin": "http://example.com",
 			},
 		},
 		{
@@ -42,6 +55,7 @@ func TestCors(t *testing.T) {
 				WithAllowedOrigins("http://example.com"),
 			},
 			method: "GET",
+			status: 200,
 			requestHeaders: map[string]string{
 				"Origin": "http://example.com",
 			},
@@ -56,6 +70,7 @@ func TestCors(t *testing.T) {
 				WithAllowedOrigins("http://example.com", "http://example.org"),
 			},
 			method: "GET",
+			status: 200,
 			requestHeaders: map[string]string{
 				"Origin": "http://example.org",
 			},
@@ -84,6 +99,10 @@ func TestCors(t *testing.T) {
 			res := httptest.NewRecorder()
 
 			mw(final).ServeHTTP(res, req)
+
+			if res.Result().StatusCode != tc.status {
+				t.Errorf("expected status code: %d, got: %d", tc.status, res.Result().StatusCode)
+			}
 
 			assertResponseHeaders(t, res.Header(), tc.responseHeaders)
 		})

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -119,12 +120,12 @@ func (r *routeTreeNode) GetOrCreateNode(path string) *routeTreeNode {
 	return node
 }
 
-func (r *routeTreeNode) Find(req *http.Request) (*routeTreeNode, bool) {
+func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
 
 	path := req.URL.Path
 
 	if path == "" || path == "/" {
-		return r, true
+		return r
 	}
 
 	node := r
@@ -155,7 +156,7 @@ func (r *routeTreeNode) Find(req *http.Request) (*routeTreeNode, bool) {
 				req.SetPathValue(child.segment[1:], segment)
 
 				if high >= len(path) {
-					return child, true
+					return child
 				}
 
 				node = child
@@ -164,7 +165,7 @@ func (r *routeTreeNode) Find(req *http.Request) (*routeTreeNode, bool) {
 				break
 			} else if child.segment == segment {
 				if high >= len(path) {
-					return child, true
+					return child
 				}
 
 				node = child
@@ -172,16 +173,16 @@ func (r *routeTreeNode) Find(req *http.Request) (*routeTreeNode, bool) {
 				path = path[high:]
 				break
 			} else if child.catchAll {
-				return child, true
+				return child
 			}
 		}
 
 		if !found {
-			return node, false
+			return nil
 		}
 	}
 
-	return node, true
+	return nil
 }
 
 func (r *routeTreeNode) SetHandler(method string, handler http.HandlerFunc) {
@@ -213,9 +214,8 @@ func (r *routeTreeNode) Use(middleware ...Middleware) {
 
 func (r *routeTreeNode) wrapMiddleware(final http.HandlerFunc) http.HandlerFunc {
 
-	middlewares := make([]Middleware, 0)
-
 	// collect all middlewares from parent nodes and current node
+	middlewares := make([]Middleware, 0)
 	node := r
 
 	for {
@@ -241,29 +241,23 @@ func (r *routeTreeNode) wrapMiddleware(final http.HandlerFunc) http.HandlerFunc 
 
 func (r *routeTreeNode) final(w http.ResponseWriter, req *http.Request) {
 
-	f := req.Context().Value("FOUND")
-	if f == false {
-		r.config.NotFoundHandler(w, req)
-		return
-	}
-
 	handler := r.GetHandler(req.Method)
 
 	if handler == nil {
-
-		// If all handlers are nil, then return 404
-		if r.handlers == nil {
-			r.config.NotFoundHandler(w, req)
-			return
-		}
-
-		// There are handlers, but not for this method
+		w.Header().Add("Allow", strings.Join(r.getAllowedMethods(), ", "))
 		r.config.MethodNotAllowedHandler(w, req)
-
 		return
 	}
 
 	handler(w, req)
+}
+
+func (r *routeTreeNode) getAllowedMethods() []string {
+	var allowedMethods []string
+	for method := range r.handlers {
+		allowedMethods = append(allowedMethods, uint8ToMethod(uint8(method)))
+	}
+	return allowedMethods
 }
 
 func (r *routeTreeNode) getPath() string {
@@ -341,6 +335,6 @@ func uint8ToMethod(method uint8) string {
 	case httpMethodAny:
 		return "*"
 	default:
-		panic("unhandled default case")
+		panic(fmt.Errorf("unknown method: %d", method))
 	}
 }

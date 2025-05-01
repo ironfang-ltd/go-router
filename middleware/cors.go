@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -68,8 +67,6 @@ func Cors(options ...CorsOption) router.Middleware {
 	}
 
 	handlePreflightRequest := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Vary", "Access-Control-Request-Method")
-		w.Header().Add("Vary", "Access-Control-Request-Headers")
 
 		origin := r.Header.Get("Origin")
 
@@ -91,15 +88,20 @@ func Cors(options ...CorsOption) router.Middleware {
 			return
 		}
 
+		w.Header().Add("Vary", "Access-Control-Request-Method")
+		w.Header().Add("Vary", "Access-Control-Request-Headers")
+		w.Header().Add("Vary", "Origin")
+
 		// Set the allowed origin
-		if len(opts.AllowedOrigins) > 0 {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-		} else {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-		}
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 
 		// Set the allowed method
-		w.Header().Set("Access-Control-Allow-Methods", strings.ToUpper(r.Header.Get("Access-Control-Request-Method")))
+		// TODO: read the allowed methods from the route node
+		if len(opts.AllowedMethods) > 0 {
+			w.Header().Set("Access-Control-Allow-Methods", strings.ToUpper(strings.Join(opts.AllowedMethods, ", ")))
+		} else {
+			w.Header().Set("Access-Control-Allow-Methods", strings.ToUpper(r.Header.Get("Access-Control-Request-Method")))
+		}
 
 		// Set the allowed headers if set
 		if len(opts.AllowedHeaders) > 0 {
@@ -119,10 +121,6 @@ func Cors(options ...CorsOption) router.Middleware {
 
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-
-			fmt.Printf("running cors middleware...\n")
-
-			w.Header().Add("Vary", "Origin")
 
 			if isPreflightRequest(r) {
 				handlePreflightRequest(w, r)
@@ -150,12 +148,8 @@ func Cors(options ...CorsOption) router.Middleware {
 				return
 			}
 
-			// Set the allowed origin
-			if len(opts.AllowedOrigins) > 0 {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-			} else {
-				w.Header().Set("Access-Control-Allow-Origin", "*")
-			}
+			w.Header().Add("Vary", "Origin")
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 
 			// Set the exposed headers
 			if len(opts.ExposedHeaders) > 0 {

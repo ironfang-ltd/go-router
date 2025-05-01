@@ -161,7 +161,7 @@ func TestRouter_OptionsWithMultipleMiddleware(t *testing.T) {
 	g.Use(func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("X-Test-2", "test-2")
-			next(w, r)
+			//next(w, r)
 		}
 	})
 

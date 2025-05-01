@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -244,11 +245,18 @@ func (r *routeTreeNode) final(w http.ResponseWriter, req *http.Request) {
 	handler := r.GetHandler(req.Method)
 
 	if handler == nil {
-		w.Header().Add("Allow", strings.Join(r.getAllowedMethods(), ", "))
-		r.config.MethodNotAllowedHandler(w, req)
+		if len(r.handlers) == 0 {
+			slog.Debug("no handlers found", "path", req.URL.Path, "method", req.Method)
+			r.config.NotFoundHandler(w, req)
+		} else {
+			slog.Debug("method not found", "path", req.URL.Path, "method", req.Method)
+			w.Header().Add("Allow", strings.Join(r.getAllowedMethods(), ", "))
+			r.config.MethodNotAllowedHandler(w, req)
+		}
 		return
 	}
 
+	slog.Debug("executing route handler", "path", req.URL.Path, "method", req.Method)
 	handler(w, req)
 }
 

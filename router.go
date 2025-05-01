@@ -1,6 +1,7 @@
 package router
 
 import (
+	"log/slog"
 	"net/http"
 )
 
@@ -142,14 +143,22 @@ func (rtr *router) GetRoutes() []RouteDescriptor {
 }
 
 func (rtr *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	rw := &response{ResponseWriter: w}
+
 	node := rtr.node.Find(r)
 
 	if node == nil {
-		rtr.config.NotFoundHandler(w, r)
+		slog.Debug("no route found for path", "path", r.URL.Path)
+		rtr.config.NotFoundHandler(rw, r)
 		return
 	}
 
-	node.handler(w, r)
+	slog.Debug("found node for path", "path", r.URL.Path)
+	node.handler(rw, r)
+
+	if !rw.written {
+		rtr.config.NotFoundHandler(rw, r)
+	}
 }
 
 func (rtr *router) mapMethod(method, path string, handler http.HandlerFunc) *routeTreeNode {

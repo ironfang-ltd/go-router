@@ -1,7 +1,6 @@
 package router
 
 import (
-	"log/slog"
 	"net/http"
 )
 
@@ -148,12 +147,10 @@ func (rtr *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	node := rtr.node.Find(r)
 
 	if node == nil {
-		slog.Debug("no route found for path", "path", r.URL.Path)
 		rtr.config.NotFoundHandler(rw, r)
 		return
 	}
 
-	slog.Debug("found node for path", "path", r.URL.Path)
 	node.handler(rw, r)
 
 	if !rw.written {

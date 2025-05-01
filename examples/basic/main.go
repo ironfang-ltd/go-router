@@ -9,8 +9,6 @@ import (
 
 func main() {
 
-	slog.SetLogLoggerLevel(slog.LevelDebug)
-
 	r := router.New()
 
 	r.Use(func(next http.HandlerFunc) http.HandlerFunc {

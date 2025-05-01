@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -72,19 +71,16 @@ func Cors(options ...CorsOption) router.Middleware {
 
 		// Check if the origin is allowed
 		if !isOriginAllowed(opts.AllowedOrigins, origin) {
-			slog.Info("CORS origin not allowed", "origin", origin)
 			return
 		}
 
 		// Check if the method is allowed
 		if !isMethodAllowed(opts.AllowedMethods, r.Header.Get("Access-Control-Request-Method")) {
-			slog.Info("CORS method not allowed", "method", r.Header.Get("Access-Control-Request-Method"))
 			return
 		}
 
 		// Check if the headers are allowed
 		if !isHeadersAllowed(opts.AllowedHeaders, r.Header.Get("Access-Control-Request-Headers")) {
-			slog.Info("CORS headers not allowed", "headers", r.Header.Get("Access-Control-Request-Headers"))
 			return
 		}
 
@@ -136,14 +132,12 @@ func Cors(options ...CorsOption) router.Middleware {
 
 			// Check if the origin is allowed
 			if !isOriginAllowed(opts.AllowedOrigins, origin) {
-				slog.Info("CORS origin not allowed", "origin", origin)
 				w.WriteHeader(http.StatusForbidden)
 				return
 			}
 
 			// Check if the method is allowed
 			if !isMethodAllowed(opts.AllowedMethods, r.Method) {
-				slog.Info("CORS method not allowed", "method", r.Method)
 				w.WriteHeader(http.StatusForbidden)
 				return
 			}

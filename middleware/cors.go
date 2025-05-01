@@ -102,6 +102,8 @@ func Cors(options ...CorsOption) router.Middleware {
 		// Set the allowed headers if set
 		if len(opts.AllowedHeaders) > 0 {
 			w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
+		} else {
+			w.Header().Set("Access-Control-Allow-Headers", r.Header.Get("Access-Control-Request-Headers"))
 		}
 
 		// Check if allow credentials is set

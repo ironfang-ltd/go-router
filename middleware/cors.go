@@ -71,22 +71,23 @@ func Cors(options ...CorsOption) router.Middleware {
 
 		// Check if the origin is allowed
 		if !isOriginAllowed(opts.AllowedOrigins, origin) {
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
 		// Check if the method is allowed
 		if !isMethodAllowed(opts.AllowedMethods, r.Header.Get("Access-Control-Request-Method")) {
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
 		// Check if the headers are allowed
 		if !isHeadersAllowed(opts.AllowedHeaders, r.Header.Get("Access-Control-Request-Headers")) {
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
 
-		w.Header().Add("Vary", "Access-Control-Request-Method")
-		w.Header().Add("Vary", "Access-Control-Request-Headers")
-		w.Header().Add("Vary", "Origin")
+		w.Header().Add("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers")
 
 		// Set the allowed origin
 		w.Header().Set("Access-Control-Allow-Origin", origin)
@@ -144,7 +145,13 @@ func Cors(options ...CorsOption) router.Middleware {
 				return
 			}
 
-			w.Header().Add("Vary", "Origin")
+			// Check if the headers are allowed
+			if !isHeadersAllowed(opts.AllowedHeaders, r.Header.Get("Access-Control-Request-Headers")) {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+
+			w.Header().Add("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers")
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 
 			// Set the exposed headers
@@ -185,7 +192,7 @@ func isHeadersAllowed(allowedHeaders []string, requestedHeaders string) bool {
 		return true
 	}
 
-	requested := strings.Split(requestedHeaders, ", ")
+	requested := strings.Split(strings.ReplaceAll(requestedHeaders, " ", ""), ",")
 
 	for _, requestedHeader := range requested {
 		for _, allowedHeader := range allowedHeaders {

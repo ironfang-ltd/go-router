@@ -30,7 +30,7 @@ type RouteGroup interface {
 }
 
 type Route interface {
-	// Use(middleware ...Middleware)
+	Use(middleware ...Middleware)
 }
 
 type RouteDescriptor struct {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/ironfang-ltd/go-router"
+	"github.com/ironfang-ltd/go-router/middleware"
 )
 
 func main() {
@@ -15,11 +16,11 @@ func main() {
 		return func(w http.ResponseWriter, r *http.Request) {
 			slog.Debug("middleware executing...")
 			w.Header().Set("X-Test", "test")
-			//next(w, r)
+			next(w, r)
 		}
 	})
 
-	/*r.Use(middleware.Cors(middleware.WithAllowedOrigins("http://localhost:3000")))
+	r.Use(middleware.Cors(middleware.WithAllowedOrigins("http://localhost:3000")))
 
 	// Simple
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +40,7 @@ func main() {
 
 	apiGroup.Post("/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, World from api!"))
-	})*/
+	})
 
 	err := http.ListenAndServe("127.0.0.1:8080", r)
 	if err != nil {

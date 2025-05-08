@@ -104,6 +104,9 @@ func (r *routeTreeNode) GetOrCreateNode(path string) *routeTreeNode {
 			newNode.param = segment[0] == ':'
 			newNode.catchAll = segment[0] == '*'
 
+			newNode.handler = newNode.wrapMiddleware(newNode.final)
+			newNode.middleware = newNode.wrapMiddleware(newNode.config.NotFoundHandler)
+
 			node.children = append(node.children, newNode)
 
 			sort.Slice(node.children, func(i, j int) bool {

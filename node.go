@@ -54,7 +54,7 @@ func newRouteTreeNode(config *Config) *routeTreeNode {
 	}
 
 	node.handler = node.final
-	node.middleware = node.config.MethodNotAllowedHandler
+	node.middleware = node.config.NotFoundHandler
 
 	return node
 }

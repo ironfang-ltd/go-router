@@ -110,6 +110,118 @@ func TestRouter_GetWithMiddleware(t *testing.T) {
 	}
 }
 
+func TestRouter_MiddlewareExactRoot(t *testing.T) {
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+
+	r := New(
+		WithMiddlewareMatch(RouteMatchExact),
+	)
+
+	r.Use(func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Prefix-Middleware", "true")
+			next(w, r)
+		}
+	})
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("response code is: %d, expected: %d", w.Code, http.StatusNotFound)
+	}
+
+	if w.Header().Get("X-Prefix-Middleware") != "true" {
+		t.Errorf("response header X-Prefix-Middleware is: %s, expected %s", w.Header().Get("X-Test"), "true")
+	}
+}
+
+func TestRouter_MiddlewarePrefixRoot(t *testing.T) {
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+
+	r := New(
+		WithMiddlewareMatch(RouteMatchPrefix),
+	)
+
+	r.Use(func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Prefix-Middleware", "true")
+			next(w, r)
+		}
+	})
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("response code is: %d, expected: %d", w.Code, http.StatusNotFound)
+	}
+
+	if w.Header().Get("X-Prefix-Middleware") != "true" {
+		t.Errorf("response header X-Prefix-Middleware is: %s, expected %s", w.Header().Get("X-Test"), "true")
+	}
+}
+
+func TestRouter_MiddlewarePrefix(t *testing.T) {
+
+	req, _ := http.NewRequest("GET", "/prefix/match", nil)
+	w := httptest.NewRecorder()
+
+	r := New(
+		WithMiddlewareMatch(RouteMatchPrefix),
+	)
+
+	prefixGroup := r.Group("/prefix")
+
+	prefixGroup.Use(func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Prefix-Middleware", "true")
+			next(w, r)
+		}
+	})
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("response code is: %d, expected: %d", w.Code, http.StatusNotFound)
+	}
+
+	if w.Header().Get("X-Prefix-Middleware") != "true" {
+		t.Errorf("response header X-Prefix-Middleware is: %s, expected %s", w.Header().Get("X-Test"), "true")
+	}
+}
+
+func TestRouter_MiddlewareExact(t *testing.T) {
+
+	req, _ := http.NewRequest("GET", "/prefix/match", nil)
+	w := httptest.NewRecorder()
+
+	r := New(
+		WithMiddlewareMatch(RouteMatchExact),
+	)
+
+	prefixGroup := r.Group("/prefix")
+
+	prefixGroup.Use(func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Prefix-Middleware", "true")
+			next(w, r)
+		}
+	})
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("response code is: %d, expected: %d", w.Code, http.StatusNotFound)
+	}
+
+	if w.Header().Get("X-Prefix-Middleware") != "" {
+		t.Errorf("response header X-Prefix-Middleware is: %s, expected <nothing>", w.Header().Get("X-Test"))
+	}
+}
+
 func TestRouter_GetWithGroup(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", "/group/endpoint", nil)
@@ -167,7 +279,6 @@ func TestRouter_OptionsWithMultipleMiddleware(t *testing.T) {
 
 	g.Get("/endpoint", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("group-endpoint"))
 	})
 
 	r.ServeHTTP(w, req)

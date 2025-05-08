@@ -52,6 +52,7 @@ func New(opts ...Option) Router {
 		MethodNotAllowedHandler: func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		},
+		MiddlewareMatch: RouteMatchPrefix,
 	}
 
 	for _, opt := range opts {
@@ -142,19 +143,28 @@ func (rtr *router) GetRoutes() []RouteDescriptor {
 }
 
 func (rtr *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rw := &response{ResponseWriter: w}
 
-	node := rtr.node.Find(r)
-
-	if node == nil {
-		rtr.config.NotFoundHandler(rw, r)
-		return
+	rw := response{
+		ResponseWriter: w,
+		written:        false,
 	}
 
-	node.handler(rw, r)
+	node, match := rtr.node.Find(r)
+
+	switch match {
+	case RouteMatchPrefix:
+		if rtr.config.MiddlewareMatch == RouteMatchExact {
+			rtr.config.NotFoundHandler(&rw, r)
+			return
+		}
+
+		node.middleware(&rw, r)
+	case RouteMatchExact:
+		node.handler(&rw, r)
+	}
 
 	if !rw.written {
-		rtr.config.NotFoundHandler(rw, r)
+		rtr.config.NotFoundHandler(&rw, r)
 	}
 }
 

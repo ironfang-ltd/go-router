@@ -7,6 +7,13 @@ import (
 	"strings"
 )
 
+type RouteMatch int
+
+const (
+	RouteMatchExact  RouteMatch = 0
+	RouteMatchPrefix RouteMatch = 1
+)
+
 const (
 	httpMethodGet uint8 = iota
 	httpMethodHead
@@ -28,6 +35,7 @@ type routeTreeNode struct {
 	children    []*routeTreeNode
 	middlewares []Middleware
 	handler     http.HandlerFunc
+	middleware  http.HandlerFunc
 	handlers    []http.HandlerFunc
 	param       bool
 	catchAll    bool
@@ -46,6 +54,7 @@ func newRouteTreeNode(config *Config) *routeTreeNode {
 	}
 
 	node.handler = node.final
+	node.middleware = node.config.MethodNotAllowedHandler
 
 	return node
 }
@@ -120,12 +129,12 @@ func (r *routeTreeNode) GetOrCreateNode(path string) *routeTreeNode {
 	return node
 }
 
-func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
+func (r *routeTreeNode) Find(req *http.Request) (*routeTreeNode, RouteMatch) {
 
 	path := req.URL.Path
 
 	if path == "" || path == "/" {
-		return r
+		return r, RouteMatchExact
 	}
 
 	node := r
@@ -156,7 +165,7 @@ func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
 				req.SetPathValue(child.segment[1:], segment)
 
 				if high >= len(path) {
-					return child
+					return child, RouteMatchExact
 				}
 
 				node = child
@@ -165,7 +174,7 @@ func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
 				break
 			} else if child.segment == segment {
 				if high >= len(path) {
-					return child
+					return child, RouteMatchExact
 				}
 
 				node = child
@@ -173,16 +182,16 @@ func (r *routeTreeNode) Find(req *http.Request) *routeTreeNode {
 				path = path[high:]
 				break
 			} else if child.catchAll {
-				return child
+				return child, RouteMatchExact
 			}
 		}
 
 		if !found {
-			return nil
+			break
 		}
 	}
 
-	return nil
+	return node, RouteMatchPrefix
 }
 
 func (r *routeTreeNode) SetHandler(method string, handler http.HandlerFunc) {
@@ -210,6 +219,7 @@ func (r *routeTreeNode) GetHandler(method string) http.HandlerFunc {
 func (r *routeTreeNode) Use(middleware ...Middleware) {
 	r.middlewares = append(r.middlewares, middleware...)
 	r.handler = r.wrapMiddleware(r.final)
+	r.middleware = r.wrapMiddleware(r.config.NotFoundHandler)
 }
 
 func (r *routeTreeNode) wrapMiddleware(final http.HandlerFunc) http.HandlerFunc {

@@ -7,6 +7,13 @@ type Option func(*Config)
 type Config struct {
 	NotFoundHandler         http.HandlerFunc
 	MethodNotAllowedHandler http.HandlerFunc
+	MiddlewareMatch         RouteMatch
+}
+
+func WithMiddlewareMatch(match RouteMatch) Option {
+	return func(c *Config) {
+		c.MiddlewareMatch = match
+	}
 }
 
 func WithNotFoundHandler(handler http.HandlerFunc) Option {

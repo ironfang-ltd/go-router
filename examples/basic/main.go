@@ -10,11 +10,13 @@ import (
 
 func main() {
 
-	r := router.New()
+	r := router.New(
+		router.WithMiddlewareMatch(router.RouteMatchPrefix),
+	)
 
 	r.Use(func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			slog.Debug("middleware executing...")
+			slog.Info("middleware executing...")
 			w.Header().Set("X-Test", "test")
 			next(w, r)
 		}

@@ -201,6 +201,7 @@ func (r *routeTreeNode) SetHandler(method string, handler http.HandlerFunc) {
 
 	r.handlers[methodToUint8(method)] = handler
 	r.handler = r.wrapMiddleware(r.final)
+	r.middleware = r.wrapMiddleware(r.config.NotFoundHandler)
 }
 
 func (r *routeTreeNode) GetHandler(method string) http.HandlerFunc {
